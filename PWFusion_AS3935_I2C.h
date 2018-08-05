@@ -48,15 +48,16 @@
 #define PWF_AS3935_I2C_h
 
 #include "Arduino.h"
-#include "avr/pgmspace.h"
+#if !defined(ARDUINO_ARCH_SAM) && !defined(ARDUINO_ARCH_SAMD) && !defined(ESP8266) && !defined(ARDUINO_ARCH_STM32F2)
 #include "util/delay.h"
+#endif
 #include "stdlib.h"
-#include "I2C.h"
+#include <Wire.h>
 
 class PWF_AS3935_I2C
 {
  public:
-	PWF_AS3935_I2C(uint8_t IRQx, uint8_t SIx, uint8_t DEVADDx);
+	PWF_AS3935_I2C(uint8_t IRQx, uint8_t DEVADDx);
 	void AS3935_ManualCal(uint8_t capacitance, uint8_t location, uint8_t disturber);
 	void AS3935_DefInit(void);
 	void AS3935_PowerUp(void);

@@ -46,28 +46,28 @@
 * Lightning Sensor manufactured by AMS. Originally designed for application
 * on the Arduino Uno platform.
 **************************************************************************/
+#include <Wire.h>
 #include "PWFusion_AS3935_I2c.h"
 
-PWF_AS3935_I2C::PWF_AS3935_I2C(uint8_t IRQx, uint8_t SIx, uint8_t DEVADDx)
+PWF_AS3935_I2C::PWF_AS3935_I2C(uint8_t IRQx, uint8_t DEVADDx)
 {
 	_devadd = DEVADDx;
-	_si  = SIx;
 	_irq = IRQx;
 	
 	// initalize the chip select pins
-	pinMode(_si, OUTPUT);
-	pinMode(_irq, INPUT);
-	
-	// set output pin initical condition
-	digitalWrite(_si, HIGH);		// set pin high for I2C mode
-
+  if(_irq != -1)
+  {
+    pinMode(_irq, INPUT_PULLUP);
+  }
 }
 
 uint8_t PWF_AS3935_I2C::_sing_reg_read(uint8_t RegAdd)
 {
-	//        I2C address      Register address   num bytes
-	I2c.read((uint8_t)_devadd, (uint8_t)RegAdd, (uint8_t)0x01);	// Use I2C library to read register
-	uint8_t RegData = I2c.receive();							// receive the I2C data
+  Wire.beginTransmission(_devadd);
+  Wire.write(RegAdd);
+  Wire.endTransmission(false);
+  Wire.requestFrom(_devadd ,1);
+	uint8_t RegData = Wire.read();
 	return RegData;
 }
 
@@ -82,11 +82,18 @@ void PWF_AS3935_I2C::_sing_reg_write(uint8_t RegAdd, uint8_t DataMask, uint8_t R
 	uint8_t NewRegData = ((OrigRegData & ~DataMask) | (RegData & DataMask));
 
 	// finally, write the data to the register
-	I2c.write(_devadd, RegAdd, NewRegData);
+  Wire.beginTransmission(_devadd);
+  Wire.write(RegAdd);
+  Wire.write(NewRegData);
+  Wire.endTransmission(true);
+
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.print("wrt: ");
 	Serial.print(NewRegData,HEX);
 	Serial.print(" Act: ");
 	Serial.println(_sing_reg_read(RegAdd),HEX);
+#endif
+
 }
 
 void PWF_AS3935_I2C::AS3935_DefInit()
@@ -97,14 +104,20 @@ void PWF_AS3935_I2C::AS3935_DefInit()
 void PWF_AS3935_I2C::_AS3935_Reset()
 {
 	// run PRESET_DEFAULT Direct Command to set all registers in default state
-	I2c.write(_devadd, (uint8_t)0x3C, (uint8_t)0x96);
+  Wire.beginTransmission(_devadd);
+  Wire.write((uint8_t)0x3C);
+  Wire.write((uint8_t)0x96);
+  Wire.endTransmission(true);
 	delay(2);					// wait 2ms to complete
 }
 
 void PWF_AS3935_I2C::_CalRCO()
 {
 	// run ALIB_RCO Direct Command to cal internal RCO
-	I2c.write(_devadd, (uint8_t)0x3D, (uint8_t)0x96);
+  Wire.beginTransmission(_devadd);
+  Wire.write((uint8_t)0x3D);
+  Wire.write((uint8_t)0x96);
+  Wire.endTransmission(true);
 	delay(2);					// wait 2ms to complete
 }
 
@@ -117,26 +130,36 @@ void PWF_AS3935_I2C::AS3935_PowerUp(void)
 	_sing_reg_write(0x08, 0x20, 0x20);	// set DISP_SRCO to 1
 	delay(2);
 	_sing_reg_write(0x08, 0x20, 0x00);	// set DISP_SRCO to 0
+#ifdef PWF_AS3935_I2C_DEBUG
+	Serial.println("AS3935 powered up");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_PowerDown(void)
 {
 	// register 0x00, PWD bit: 0 (sets PWD)
 	_sing_reg_write(0x00, 0x01, 0x01);
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.println("AS3935 powered down");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_DisturberEn(void)
 {
 	// register 0x03, PWD bit: 5 (sets MASK_DIST)
 	_sing_reg_write(0x03, 0x20, 0x00);
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.println("disturber detection enabled");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_DisturberDis(void)
 {
 	// register 0x03, PWD bit: 5 (sets MASK_DIST)
 	_sing_reg_write(0x03, 0x20, 0x20);
+#ifdef PWF_AS3935_I2C_DEBUG
+	Serial.println("disturber detection disabled");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_SetIRQ_Output_Source(uint8_t irq_select)
@@ -176,8 +199,10 @@ void PWF_AS3935_I2C::AS3935_SetTuningCaps(uint8_t cap_val)
 	{
 		_sing_reg_write(0x08, 0x0F, (cap_val>>3));	// set capacitance bits
 	}
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.print("capacitance set to 8x");
 	Serial.println((_sing_reg_read(0x08) & 0x0F));
+#endif
 }
 
 uint8_t PWF_AS3935_I2C::AS3935_GetInterruptSrc(void)
@@ -251,14 +276,18 @@ void PWF_AS3935_I2C::AS3935_SetIndoors(void)
 	// AFE settings addres 0x00, bits 5:1 (10010, based on datasheet, pg 19, table 15)
 	// this is the default setting at power-up (AS3935 datasheet, table 9)
 	_sing_reg_write(0x00, 0x3E, 0x24);
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.println("set up for indoor operation");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_SetOutdoors(void)
 {
 	// AFE settings addres 0x00, bits 5:1 (01110, based on datasheet, pg 19, table 15)
 	_sing_reg_write(0x00, 0x3E, 0x1C);
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.println("set up for outdoor operation");
+#endif
 }
 
 void PWF_AS3935_I2C::AS3935_ClearStatistics(void)
@@ -400,7 +429,8 @@ void PWF_AS3935_I2C::AS3935_ManualCal(uint8_t capacitance, uint8_t location, uin
 	// capacitance first... directly write value here
 	AS3935_SetTuningCaps(capacitance);
 	
+#ifdef PWF_AS3935_I2C_DEBUG
 	Serial.println("AS3935 manual cal complete");
+#endif
 }
-// a nice function would be to read the last 'x' strike data values.... 
 

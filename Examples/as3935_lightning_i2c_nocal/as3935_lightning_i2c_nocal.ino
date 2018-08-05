@@ -67,8 +67,6 @@
 *    5V:     5V         ''       -->  Arduino I/O is at 5V, so power board from 5V. Can use 3.3V with Due, etc
 **************************************************************************/
 // The AS3935 communicates via SPI or I2C. 
-// This example uses the I2C interface via the I2C lib, not Wire lib
-#include "I2C.h"
 // include Playing With Fusion AXS3935 libraries
 #include "PWFusion_AS3935_I2C.h"
 
@@ -77,9 +75,9 @@ volatile int8_t AS3935_ISR_Trig = 0;
 
 // defines for hardware config
 #define SI_PIN               9
-#define IRQ_PIN              2        // digital pins 2 and 3 are available for interrupt capability
+#define IRQ_PIN              0        // digital pins 2 and 3 are available for interrupt capability
 #define AS3935_ADD           0x03     // x03 - standard PWF SEN-39001-R01 config
-#define AS3935_CAPACITANCE   72       // <-- SET THIS VALUE TO THE NUMBER LISTED ON YOUR BOARD 
+#define AS3935_CAPACITANCE   80       // <-- SET THIS VALUE TO THE NUMBER LISTED ON YOUR BOARD 
 
 // defines for general chip settings
 #define AS3935_INDOORS       0
@@ -90,20 +88,19 @@ volatile int8_t AS3935_ISR_Trig = 0;
 // prototypes
 void AS3935_ISR();
 
-PWF_AS3935_I2C  lightning0((uint8_t)IRQ_PIN, (uint8_t)SI_PIN, (uint8_t)AS3935_ADD);
+PWF_AS3935_I2C  lightning0((uint8_t)IRQ_PIN, (uint8_t)AS3935_ADD);
 
 void setup()
 {
   
   Serial.begin(115200);
+  delay(5000);
   Serial.println("Playing With Fusion: AS3935 Lightning Sensor, SEN-39001-R01");
   Serial.println("beginning boot procedure....");
   
   // setup for the the I2C library: (enable pullups, set speed to 400kHz)
-  I2c.begin();
-  I2c.pullup(true);
-  I2c.setSpeed(1); 
-  delay(2);
+  Wire.begin();
+  Wire.setClock(400000);
   
   lightning0.AS3935_DefInit();   // set registers to default  
   // now update sensor cal for your application and power up chip
@@ -115,7 +112,7 @@ void setup()
                                  // function also powers up the chip
                   
   // enable interrupt (hook IRQ pin to Arduino Uno/Mega interrupt input: 0 -> pin 2, 1 -> pin 3 )
-  attachInterrupt(0, AS3935_ISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRQ_PIN), AS3935_ISR, RISING);
   lightning0.AS3935_PrintAllRegs();
   AS3935_ISR_Trig = 0;           // clear trigger
 
