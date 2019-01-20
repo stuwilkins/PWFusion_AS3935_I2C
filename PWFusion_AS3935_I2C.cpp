@@ -55,10 +55,21 @@ PWF_AS3935_I2C::PWF_AS3935_I2C(uint8_t IRQx, uint8_t DEVADDx)
 	_irq = IRQx;
 	
 	// initalize the chip select pins
+}
+
+bool PWF_AS3935_I2C::begin(void)
+{
   if(_irq != -1)
   {
     pinMode(_irq, INPUT_PULLUP);
   }
+
+  Wire.begin();
+  Wire.setClock(400000);
+
+	_AS3935_Reset();			// reset registers to default
+
+  return true;
 }
 
 uint8_t PWF_AS3935_I2C::_sing_reg_read(uint8_t RegAdd)

@@ -57,7 +57,8 @@
 class PWF_AS3935_I2C
 {
  public:
-	PWF_AS3935_I2C(uint8_t IRQx, uint8_t DEVADDx);
+  PWF_AS3935_I2C(uint8_t IRQx = -1, uint8_t DEVADDx = 0x03);
+  bool begin(void);
 	void AS3935_ManualCal(uint8_t capacitance, uint8_t location, uint8_t disturber);
 	void AS3935_DefInit(void);
 	void AS3935_PowerUp(void);

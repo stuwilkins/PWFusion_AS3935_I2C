@@ -68,13 +68,13 @@
 **************************************************************************/
 // The AS3935 communicates via SPI or I2C. 
 // include Playing With Fusion AXS3935 libraries
+#define PWF_AS3935_I2C_DEBUG 
 #include "PWFusion_AS3935_I2C.h"
 
 // interrupt trigger global var        
 volatile int8_t AS3935_ISR_Trig = 0;
 
 // defines for hardware config
-#define SI_PIN               9
 #define IRQ_PIN              0        // digital pins 2 and 3 are available for interrupt capability
 #define AS3935_ADD           0x03     // x03 - standard PWF SEN-39001-R01 config
 #define AS3935_CAPACITANCE   80       // <-- SET THIS VALUE TO THE NUMBER LISTED ON YOUR BOARD 
@@ -88,7 +88,7 @@ volatile int8_t AS3935_ISR_Trig = 0;
 // prototypes
 void AS3935_ISR();
 
-PWF_AS3935_I2C  lightning0((uint8_t)IRQ_PIN, (uint8_t)AS3935_ADD);
+PWF_AS3935_I2C  lightning0(IRQ_PIN);
 
 void setup()
 {
@@ -98,11 +98,8 @@ void setup()
   Serial.println("Playing With Fusion: AS3935 Lightning Sensor, SEN-39001-R01");
   Serial.println("beginning boot procedure....");
   
-  // setup for the the I2C library: (enable pullups, set speed to 400kHz)
-  Wire.begin();
-  Wire.setClock(400000);
-  
-  lightning0.AS3935_DefInit();   // set registers to default  
+  lightning0.begin();
+
   // now update sensor cal for your application and power up chip
   lightning0.AS3935_ManualCal(AS3935_CAPACITANCE, AS3935_OUTDOORS, AS3935_DIST_EN);
                                  // AS3935_ManualCal Parameters:
